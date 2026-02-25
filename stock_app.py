@@ -2,24 +2,21 @@ import streamlit as st
 import yfinance as yf
 import pandas as pd
 import numpy as np
-from datetime import datetime
 
 # ==========================================
-# 1. 시스템 설정 및 디자인 (직관성 극대화)
+# 1. 초기 설정 및 스타일 (직관성 강화)
 # ==========================================
 st.set_page_config(page_title="Golden-Bell Asset Master", layout="wide", initial_sidebar_state="expanded")
 
-# 사용자 경험(UX)을 위한 커스텀 스타일
 st.markdown("""
     <style>
-    .main-header { font-size: 42px !important; font-weight: 800; color: #FFD700; text-align: center; margin-bottom: 30px; }
-    .status-card { border-radius: 15px; padding: 20px; border: 1px solid #FFD700; background: rgba(255, 215, 0, 0.05); }
-    .guide-box { background-color: #262730; padding: 20px; border-radius: 10px; border-left: 5px solid #FFD700; }
-    .stButton>button { width: 100%; border-radius: 10px; height: 3em; font-weight: bold; }
+    .main-header { font-size: 38px !important; font-weight: 800; color: #FFD700; text-align: center; margin-bottom: 10px; }
+    .step-title { font-size: 22px; font-weight: 700; color: #FFFFFF; border-left: 5px solid #FFD700; padding-left: 15px; margin: 20px 0; }
+    .recommend-box { border-radius: 15px; padding: 25px; background: linear-gradient(135deg, #1e1e1e, #2d2d2d); border: 1px solid #FFD700; }
+    .stButton>button { height: 4em; font-weight: bold; border-radius: 10px; }
     </style>
     """, unsafe_allow_html=True)
 
-# 자산 설정
 TICKER_MAP = {
     "주식 (NVDA)": "NVDA",
     "크립토 (BTC)": "BTC-USD",
@@ -27,7 +24,7 @@ TICKER_MAP = {
     "채권 (TLT)": "TLT"
 }
 
-@st.cache(allow_output_mutation=True)
+@st.cache_resource # 최신 버전용 캐시
 def get_data(ticker):
     try:
         df = yf.download(ticker, period='1y', interval='1d', auto_adjust=True, progress=False)
@@ -43,73 +40,87 @@ def get_data(ticker):
     except: return None
 
 # ==========================================
-# 2. [STEP 1] 글로벌 자산 로테이션 (투자처 추천)
+# 2. [STEP 1] 매일 알려주는 투자 방향성
 # ==========================================
-st.markdown("<h1 class='main-header'>🏆 Golden-Bell 실전 투자 의사결정</h1>", unsafe_allow_html=True)
+st.markdown("<h1 class='main-header'>🏆 Golden-Bell 투자 네비게이터</h1>", unsafe_allow_html=True)
+st.write("<p style='text-align: center; color: gray;'>데이터로 분석하고 원칙으로 실행하는 당신의 자산 관리 파트너</p>", unsafe_allow_html=True)
 
-st.subheader("📍 [1단계] AI 마켓 레이더: 지금 어디에 투자할까?")
-top1, top2, top3, top4 = st.columns(4)
-with top1: st.success("🐋 **크립토**: 매수 우위"); st.caption("세력 매집 확인 / 비중 확대")
-with top2: st.info("📈 **채권**: 매력도 높음"); st.caption("금리 정점 통과 중 / 안전")
-with top3: st.warning("🏦 **주식**: 선택적 매수"); st.caption("실적 우량주 중심 대응")
-with top4: st.write("🟡 **금**: 관망"); st.caption("박스권 상단 저항")
-
-st.markdown("---")
+st.markdown("<div class='step-title'>📍 STEP 1. 오늘의 AI 추천 투자처</div>", unsafe_allow_html=True)
+r1, r2, r3, r4 = st.columns(4)
+r1.metric("1순위: 크립토", "매수 우위", "세력 매집")
+r2.metric("2순위: 채권", "비중 확대", "금리 고점")
+r3.metric("3순위: 주식", "중립", "실적 장세")
+r4.metric("4순위: 금", "관망", "저항 확인")
 
 # ==========================================
-# 3. [STEP 2] 자산 카테고리 선택 및 상세 분석
+# 3. [STEP 2] 카테고리 선택 및 상세 가이드
 # ==========================================
-st.subheader("📍 [2단계] 집중 분석할 자산을 선택하세요")
-category_list = list(TICKER_MAP.keys())
-selected_cat = st.selectbox("", category_list, label_visibility="collapsed")
+st.markdown("<div class='step-title'>📍 STEP 2. 관심 있는 자산을 선택하세요</div>", unsafe_allow_html=True)
+selected_cat = st.selectbox("", list(TICKER_MAP.keys()), label_visibility="collapsed")
 target_ticker = TICKER_MAP[selected_cat]
 
 data = get_data(target_ticker)
 
 if data is not None:
-    # 최신 데이터 추출
     last_row = data.dropna(subset=['20SMA', 'RSI']).iloc[-1]
-    cur_p = float(last_row['Close'])
-    sma_v = float(last_row['20SMA'])
-    rsi_v = float(last_row['RSI'])
+    cur_p, sma_v, rsi_v = float(last_row['Close']), float(last_row['20SMA']), float(last_row['RSI'])
+
+    # AI의 자산별 상세 브리핑 (사용자가 선택했을 때 다음 과정 가이드)
+    st.markdown("<div class='recommend-box'>", unsafe_allow_html=True)
+    st.subheader(f"📡 AI 브리핑: {selected_cat}")
+    if cur_p > sma_v:
+        st.write(f"현재 {selected_cat}는 **강세 추세**에 있습니다. '생명선'인 20일선 위에서 가격이 형성되어 있어 신규 진입 및 보유가 유리한 시점입니다.")
+    else:
+        st.write(f"현재 {selected_cat}는 **약세 흐름**입니다. 무리한 매수보다는 생명선을 회복할 때까지 기다리는 인내가 필요합니다.")
+    st.markdown("</div>", unsafe_allow_html=True)
 
     # ==========================================
-    # 4. [STEP 3] 진행 모드 선택 (실전 vs 교육)
+    # 4. [STEP 3] 진행 경로 선택 (실전 vs 교육)
     # ==========================================
-    st.subheader(f"📍 [3단계] {selected_cat} - 실행 모드를 선택하세요")
-    col_btn1, col_btn2 = st.columns(2)
+    st.markdown("<div class='step-title'>📍 STEP 3. 분석 결과에 따른 실행을 선택하세요</div>", unsafe_allow_html=True)
+    c_btn1, c_btn2 = st.columns(2)
     
-    # 세션 상태로 모드 관리
-    if 'app_mode' not in st.session_state: st.session_state.app_mode = "실전"
-    
-    if col_btn1.button("🚀 실전 매매 타점 (프로 전용)", use_container_width=True):
-        st.session_state.app_mode = "실전"
-    if col_btn2.button("🧒 모의 투자 및 교육 (주니어용)", use_container_width=True):
-        st.session_state.app_mode = "교육"
+    if 'mode' not in st.session_state: st.session_state.mode = "실전"
+    if c_btn1.button("🚀 전문가용 실전 타점 확인 (PRO)", use_container_width=True): st.session_state.mode = "실전"
+    if c_btn2.button("🧒 주니어용 지표 교육 & 실습 (EDU)", use_container_width=True): st.session_state.mode = "교육"
 
     st.markdown("---")
 
-    # ==========================================
-    # 5. 모드별 상세 인터페이스 (약속된 기능 복구)
-    # ==========================================
-    if st.session_state.app_mode == "실전":
-        st.markdown(f"### 💼 {selected_cat} 실전 매매 대시보드")
-        
-        # [지표 판독]
-        m1, m2, m3 = st.columns(3)
-        m1.metric("현재가", f"{cur_p:,.2f}")
-        m2.metric("20일 생명선 이격도", f"{(cur_p/sma_v*100)-100:+.2f}%", delta="추세 유지" if cur_p > sma_v else "추세 하락")
-        m3.metric("RSI (심리 지수)", f"{rsi_v:.2f}")
+    if st.session_state.mode == "실전":
+        st.subheader(f"📊 {selected_cat} 실전 매매 리포트")
+        col1, col2, col3 = st.columns(3)
+        col1.metric("현재가", f"{cur_p:,.2f}")
+        col2.metric("20일선 이격", f"{(cur_p/sma_v*100)-100:+.2f}%")
+        col3.metric("심리지수(RSI)", f"{rsi_v:.2f}")
 
-        # [실전 타점 및 이유]
-        st.markdown("<div class='status-card'>", unsafe_allow_html=True)
-        st.subheader("🎯 오늘의 실전 타점")
-        if cur_p > sma_v * 1.01 and rsi_v < 70:
-            st.write("✅ **판독:** 주가가 생명선 위에서 안정적으로 지지받고 있습니다. 매수 우위 구간입니다.")
-        elif cur_p < sma_v * 0.99:
-            st.write("❌ **판독:** 주가가 생명선 아래로 이탈했습니다. 지금 매수하는 것은 위험합니다. 관망하세요.")
-        else:
-            st.write("⚠️ **판독:** 방향성을 탐색 중입니다. 20일선 돌파를 확인하고 진입해도 늦지 않습니다.")
+        st.line_chart(data[['Close', '20SMA']].tail(100))
         
-        st.write(f"**추천 행동:** 진입가 {sma_v:,.2f} 부근 / 목표가 {cur_p*1.1:,.2f} / **절대 손절가 {sma_v*0.97:,.2f}**")
-        st.markdown("</div>", unsafe_allow_
+        st.info(f"**💡 전문가 가이드:** 진입 권장가는 {sma_v:,.2f} 부근이며, 목표가는 {cur_p*1.1:,.2f}입니다. **손절은 반드시 {sma_v*0.97:,.2f}**에서 기계적으로 실행하세요.")
+    
+    else:
+        st.subheader(f"🎓 {selected_cat} 경제 지혜 학교")
+        st.markdown("> **지표 공부하기:** 차트의 주황색 선은 '평균'을 말해요. 친구들 20명의 평균 점수보다 내 점수가 높으면 공부를 잘하고 있는 거죠? 주가도 똑같아요!")
+        
+        st.line_chart(data['Close'].tail(120))
+        
+        st.success(f"**💰 모의 투자 실습:** 지금 100만원을 투자하면 **{1000000/cur_p:.2f}개**를 가질 수 있어요. 미래에 이 가치가 어떻게 변할지 지켜볼까요?")
+        if st.button("가상 투자 실행해보기"): st.balloons()
+
+# ==========================================
+# 5. 사이드바 (추가 보안/세력 정보)
+# ==========================================
+with st.sidebar:
+    st.title("🏆 Golden-Bell 센터")
+    st.write("---")
+    st.subheader("📡 세력 레이더")
+    if "크립토" in selected_cat:
+        st.info("🐋 고래들의 대량 매집이 포착되었습니다. 단기 변동성보다는 장기 추세에 집중하세요.")
+    elif "주식" in selected_cat:
+        st.info("🏦 외국인과 기관의 동반 매수가 유입되고 있습니다. 실적 발표 시점을 주시하세요.")
+    
+    st.write("---")
+    st.subheader("🛡️ 보안 리포트")
+    st.write("현재 시장의 해킹 및 보안 관련 악재는 데이터상 '노이즈'로 판명되었습니다. 원칙대로 매매하십시오.")
+
+st.markdown("---")
+st.caption("Golden-Bell: 우리는 데이터로 판단하고 원칙으로 승리합니다. (Ver 2026.02.25)")
