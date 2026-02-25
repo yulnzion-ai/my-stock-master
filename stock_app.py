@@ -4,7 +4,7 @@ import pandas as pd
 import numpy as np
 
 # ==========================================
-# 1. 시스템 설정 (에러를 일으키는 캐시 기능을 완전히 제거하여 실행 보장)
+# 1. 시스템 설정 (에러의 주범인 cache 기능을 완전히 제거)
 # ==========================================
 st.set_page_config(page_title="Golden-Bell Asset Master", layout="wide", initial_sidebar_state="expanded")
 
@@ -25,16 +25,17 @@ TICKER_MAP = {
     "채권 (Bonds)": "TLT"
 }
 
-def get_data_full(ticker):
+# 에러가 발생하는 @st.cache_resource를 삭제하고 직접 데이터를 호출합니다.
+def get_data_direct(ticker):
     try:
         df = yf.download(ticker, period='1y', interval='1d', auto_adjust=True, progress=False)
         if df.empty or len(df) < 20: return None
         if isinstance(df.columns, pd.MultiIndex):
             df.columns = df.columns.get_level_values(0)
         df = df.copy()
-        # 30년 경력의 핵심 지표: 20일 이동평균선(생명선) 산출
+        # 30년 경력의 핵심 지표: 20일 이동평균선(생명선)
         df['SMA20'] = df['Close'].rolling(window=20).mean()
-        # RSI 지표 계산 (사람들의 흥분도 및 심리 분석)
+        # RSI 지표 (사람들의 흥분도 분석)
         delta = df['Close'].diff()
         gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
         loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
@@ -44,7 +45,7 @@ def get_data_full(ticker):
         return None
 
 # ==========================================
-# 2. [STEP 1] 오늘의 AI 자산 로테이션 추천 (무삭제 원칙)
+# 2. [STEP 1] 오늘의 AI 자산 로테이션 추천 (무삭제)
 # ==========================================
 st.markdown("<h1 class='main-header'>🏆 Golden-Bell 실전 투자 네비게이터</h1>", unsafe_allow_html=True)
 st.markdown("<div style='text-align: center; margin-bottom: 30px;'>데이터로 판단하고 원칙으로 승리하는 30년 경력의 지혜</div>", unsafe_allow_html=True)
@@ -73,11 +74,11 @@ with r4:
 st.markdown("---")
 
 # ==========================================
-# 3. [STEP 2] 자산 분석 및 AI 마켓 레이더 (보안/세력 상세 브리핑)
+# 3. [STEP 2] 자산 분석 및 AI 마켓 레이더 (세력/보안 상세 브리핑)
 # ==========================================
 st.markdown("### <span class='step-label'>STEP 2</span> 분석할 자산 카테고리를 선택하세요", unsafe_allow_html=True)
 selected_cat = st.selectbox("", list(TICKER_MAP.keys()), label_visibility="collapsed")
-data = get_data_full(TICKER_MAP[selected_cat])
+data = get_data_direct(TICKER_MAP[selected_cat])
 
 if data is not None:
     last = data.dropna().iloc[-1]
@@ -119,8 +120,7 @@ if data is not None:
         m_col3.metric("RSI(심리지수)", f"{rsi_v:.2f}")
 
         st.line_chart(data[['Close', 'SMA20']].tail(120))
-        
-        
+                
         st.markdown(f"""
         ### 🎯 30년 경력 애널리스트의 액션 플랜
         * **권장 진입 타점**: {sma_v*1.005:,.2f} 부근 (생명선 지지 확인 시 분할 매수)
@@ -186,4 +186,4 @@ with st.sidebar:
     st.caption("글로벌 자산 보안 등급: **안정**")
     st.caption("데이터에 기반한 원칙 매매를 지속하십시오.")
     st.markdown("---")
-    st.write("Ver 3.7 | Golden-Bell Master")
+    st.write("Ver 3.8 | Golden-Bell Master")
