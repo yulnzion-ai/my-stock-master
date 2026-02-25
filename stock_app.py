@@ -17,7 +17,7 @@ TICKER_MAP = {
     "채권 (Bonds)": "TLT"      # 미국 장기채 ETF
 }
 
-@st.cache_data
+@st.cache
 def get_data(ticker, period='6mo', interval='1d'):
     """yfinance를 통한 실시간 데이터 호출 및 보조지표 계산"""
     try:
